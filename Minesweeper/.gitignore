@@ -1,0 +1,14 @@
+#Compiled Files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+Minesweeper
+Makefile*
+*.user
+Makefile*
+moc_*.cpp
+moc_*.h
+scores.sqlite
