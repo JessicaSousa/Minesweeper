@@ -209,7 +209,7 @@ class MineSweeper{
         return this->board[location.x][location.y];
     }
     
-   /* 
+  
     std::vector<int> get_label(){
         std::vector<int> label;
         for(int row = 0; row < this->row_size; row++){
@@ -235,7 +235,7 @@ class MineSweeper{
     }
     
     
-    
+  /*  
     void update_board(Square square){
         if(square.isUncovered == true)
             return;
@@ -330,6 +330,14 @@ int main(){
     }
    
     //m.update_board(m.get_square({0,2}));
-   
+    std::cout << "-------Label-------\n";
+    std::vector<int> label = m.get_label();
+    
+    for(int i = 0; i < r; i++){
+       for(int j = 0; j < c; j++){
+            cout << label[i + r*j] << " ";
+        }
+        cout << endl; 
+    }
     return 0;
 }
