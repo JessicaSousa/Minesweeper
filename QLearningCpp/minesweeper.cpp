@@ -6,6 +6,15 @@
 #include <vector>
 #include<ctime>
 #include <map>
+
+template <typename type>
+bool in(type elm, std::vector<type> vec){
+    for( auto x: vec ){
+        if(elm == x )
+            return true;
+    }
+    return false;
+}
  
 
 std::vector<int> RandomSample(std::size_t size, std::size_t max)
@@ -20,11 +29,12 @@ std::vector<int> RandomSample(std::size_t size, std::size_t max)
     }
     return out;
 }
+
 struct Tuple{
     int x,y;
     
     
-    Tuple& operator =(const Tuple& t)
+    Tuple& operator=(const Tuple& t)
     {
         x = t.x;
         y = t.y;
@@ -35,8 +45,12 @@ struct Tuple{
         return(t.x==x && t.y == y);
     }
     
+    friend std::ostream &operator<<( std::ostream &output, const Tuple &t ){
+        output << "(" << t.x << "," << t.y << ")";
+        return output;
+    }
+    
 };
-
 class Square{
   public:
   Tuple location = {0, 0};
@@ -47,12 +61,18 @@ class Square{
       this->location = location;
   }
   
+  friend std::ostream &operator<<( std::ostream &output, 
+         const Square &S ) { 
+         output << "location: " << S.location << ", isUncovered: " 
+                                 << S.isUncovered << ", value: " << S.value;
+         return output;            
+   }  
+  
   bool operator==(const Square &s) {
     return(this->isUncovered == s.isUncovered && this->value == s.value && location == s.location);
   }
-  
+ 
 };
-
 class MineSweeper{
     public:
     std::vector<std::vector<Square>> board;  
@@ -124,7 +144,6 @@ class MineSweeper{
                 break;
         }        
         this->insert_mines();
-        
 
         if (verbose)
             std::cout << "Playing on " << row<<" x "<< column <<" board with difficulty " << difficulty << "\n";
@@ -185,7 +204,7 @@ class MineSweeper{
         for(int row = 0; row < this->row_size; row++){
             for(int col = 0; col < this->column_size; col++){
                 Square square = this->board[row][col];
-                if(square.isUncovered == false){
+                if(square.isUncovered == 0){
                     state.push_back(this->covered_value);
                 }
                 else{
@@ -196,86 +215,99 @@ class MineSweeper{
         return state;
     }
     
-
-    int get_state_index_from_location(int row, int col){
-        return row*this->row_size + col;
-    }
-    
     int get_location_from_state_index(int index){
         return index / this->row_size, index % this->row_size;
     }
     
-    Square get_square(Tuple location){
-        return this->board[location.x][location.y];
+    Square* get_square(Tuple location){
+        return &(this->board[location.x][location.y]);
     }
     
-  
+    bool is_bomb(Square square){
+        return (square.value == this->bomb_value);
+    }
+    
     std::vector<int> get_label(){
         std::vector<int> label;
         for(int row = 0; row < this->row_size; row++){
             for(int col = 0; col < this->column_size; col++){
+                
                 Square square = this->board[row][col];
-                bool found = false;
-                for(auto s: this->frontier){
-                    if(square == s){
-                        if (square.value != this->bomb_value)
-                            label.push_back(1);
-                        else
-                            label.push_back(0);
-                        found == true;
-                        break;
+                bool found = in(square,this->frontier);
+                
+                if(found){
+                    if(square.value == this->bomb_number){
+                        label.push_back(1);
+                    }else{
+    
+                        label.push_back(0);
                     }
+                }else{
+                  
+                  label.push_back(0);  
+                
                 }
-                if(!found){
-                    label.push_back(0);
-                }
+               
             }
         }
         return label;
     }
     
-    
-  /*  
-    void update_board(Square square){
-        if(square.isUncovered == true)
+    //Atualiza o campo dado um quadrado indicando a jogada
+    void update_board(Square * square){
+        
+        if(square->isUncovered){
             return;
-            
-        for(auto s: this->frontier){
-            if(square == s){
-                this->frontier.erase(std::remove(this->frontier.begin(),
-                                                this->frontier.end(), square), 
-                                                this->frontier.end());
-                break;
+        }
+
+        //Remove square que se encontra dentro de frontier
+        this->frontier.erase(std::remove(this->frontier.begin(),
+                                         this->frontier.end(), *square), 
+                                         this->frontier.end());
+
+        //descobrir quadrado
+        square->isUncovered = true;
+        this->num_uncovered += 1;
+        
+        //Caso o valor seja igual a zero, descobre recursivamente
+        if(square->value == 0){
+            std::map<int, Square*> neigbourlist = this->get_neighbors(*square);
+            for(auto const &neigbour : neigbourlist){
+                Square * value = (neigbour.second);
+                this->update_board(value);
             }
         }
-        square.isUncovered =  true;
-        this->num_uncovered++;
-
-        if(square.value == 0){
-            std::map<int, Square*> neigbourlist = this->get_neighbors(square);
+        else{
+            std::map<int, Square*> neigbourlist = this->get_neighbors(*square);
             for(auto const &neigbour : neigbourlist){
-                this->update_board(*(neigbour.second));
-                std::cout << neigbour.second->value<< std::endl;
-            }
-        }else
-        {
-            std::map<int, Square*> neigbourlist = this->get_neighbors(square);
-            for(auto const &neigbour : neigbourlist){
-                bool found = false;
-                for(auto s: this->frontier){
-                    if(square == s && (neigbour.second)->isUncovered == false ){
-                        this->frontier.push_back(*(neigbour.second));
-                        found = true;
-                        break;
-                    }
+                //verifica se o quadrado está em um vetor de quadrados (frontier)
+                Square value = *(neigbour.second);
+                bool found = in(value,this->frontier);
+                if(value.isUncovered == false && !found){
+                    this->frontier.push_back(value);
                 }
             }
         }
+        
     }
     
-    std::vector<int> get_next_state(Square square){
-        if(!square.isUncovered){
-            if(square.value == this->bomb_value){
+   std::vector<Square> get_frontier(){
+        return this->frontier;
+   }
+   
+   std::vector<int> get_init_state(){
+        std::vector<int>state;
+ 
+        for(int i  = 0; i < (this->row_size)*(this->column_size); i++){
+            state.push_back(this->covered_value);
+        }
+
+        return state;
+   }
+    
+    std::vector<int> get_next_state(Square * square){
+        if(!square->isUncovered){
+            if(square->value == this->bomb_value){
                 this->gameEnd = true;
             }
             else{
@@ -283,17 +315,18 @@ class MineSweeper{
                 this->update_board(square);
             }
         }
-        if(this->num_uncovered == this->row_size*this->column_size - this->bomb_number){
+        if(this->num_uncovered == ((this->row_size*this->column_size) - this->bomb_number)){
             this->gameEnd = true;
             this->gameWon = true;
         }
         if (this->verbose){
             std::vector<int> s = this->get_state();
+            std::cout << "\nState: ";
             for(auto i: s){
               std::cout << i << " ";  
             }
             std::cout << "\n";
-            
+            std::cout << "Label: ";
             std::vector<int> l = this->get_label();
             for(auto i: l){
               std::cout << i << " ";  
@@ -302,42 +335,127 @@ class MineSweeper{
         }
         return this->get_state();
     }
-    */
+    
+    bool inFrontier(Tuple t){
+        for(auto f: this->frontier)
+            if(t == f.location)
+                return true;
+        return false;
+    }
+    
+    Square * get_random_move_off_frontier(){
+        Tuple randomLocation = {rand() % (int) this->row_size, rand() % (int) this->column_size};
+        
+        while(inFrontier(randomLocation) || this->get_square(randomLocation)->isUncovered){
+            randomLocation = {rand() % (int) this->row_size, rand() % (int) this->column_size};
+        }
+        
+        return this->get_square(randomLocation);
+    }
+    
     
 };
 
+
+
+/*
+# Generates a map containing estimated q values for each (state, action) pair,
+# where the action is the location of the next move. Generates this by picking
+# a random move from the frontier, then by inputting all correct moves into the 
+# map. Picks a random correct move and repeats. Performs better than the alternative
+# using random playing because it gathers more data.
+def generate_state_map_using_label(num_total_simulations=100, row=4, col=4, difficulty=1, reward=1):
+    qMap = collections.Counter()
+
+    for iterationNo in xrange(num_total_simulations):
+        if iterationNo % 1000 == 0:
+            print "Playing %dth training game." % iterationNo
+        game = MineSweeper(row, col, difficulty)
+
+        topLeftCorner = (0, 0)
+        nextMove = game.get_square(topLeftCorner)
+        currentState = tuple(game.get_next_state(nextMove))
+
+        while not game.gameEnd:
+            label = game.get_label()    # get list of correct moves
+            listOfCorrectMoveIndices = []
+            qMap[currentState] += 1     # to indicate that the algorithm has visited this state once 
+            for j in range(len(label)):
+                stateAndAction = (currentState, game.get_location_from_state_index(j))
+                if label[j] == 1:
+                    qMap[stateAndAction] += reward
+                    listOfCorrectMoveIndices.append(j)
+
+            nextMove = None
+
+            if not listOfCorrectMoveIndices:
+                nextMove = game.get_random_move_off_frontier()
+            else:
+                index = random.choice(listOfCorrectMoveIndices)
+                randomCorrectLocation = game.get_location_from_state_index(index)
+                nextMove = game.get_square(randomCorrectLocation)
+            
+            currentState = tuple(game.get_next_state(nextMove))
+
+    return qMap
+
+# Returns the square of the best move
+def getNextMove(qMap, game):
+    bestMoveLocation = (-1, -1)
+    maxQValue = float("-inf")
+    possibleMoves = map(lambda x: x.location, game.get_frontier())
+    currentState = tuple(game.get_state())
+    shouldPickRandomMove = True
+    
+    for move in possibleMoves:
+        q = qMap[ (currentState, move) ]
+        if q > maxQValue:
+            bestMoveLocation, maxQValue = move, q
+
+    if maxQValue > 0 or qMap[currentState] == 0:
+        shouldPickRandomMove = False
+
+    if shouldPickRandomMove:
+        return game.get_random_move_off_frontier()
+
+    else:
+        return game.get_square(bestMoveLocation)
+
+*/
 using namespace std;
 
 int main(){
-    int r = 5, c = 4;
-    MineSweeper m(r,c,1,true);
+    int r = 4, c = 4; //3 minas
+    MineSweeper jogo(r,c,1,true);
     
     std::cout << "------- Minado -------\n";
     for(int i = 0; i < r; i++){
         for(int j = 0; j < c; j++){
-            cout << m.board[i][j].value << " ";
+            cout << jogo.board[i][j].value << " ";
         }
         cout << endl;
     }
-    std::cout << "-------State-------\n";
-    std::vector<int> state = m.get_state();
+    Square * s = jogo.get_square({0,0});
+    std::cout<<*s<<endl;
+    jogo.get_next_state(s);
+    std::cout<<*s<<endl;
+    //jogo.get_next_state(jogo.get_square({0,1}));
+    //jogo.get_next_state(jogo.get_square({0,2}));
+    
+    /*
+    std::cout << "Current State" << std::endl;
     
     for(int i = 0; i < r; i++){
        for(int j = 0; j < c; j++){
-            cout << state[i + r*j] << " ";
+            cout << currentState[i + r*j] << " ";
         }
         cout << endl; 
-    }
+    }*/
+    //m.get_next_state(move)
+    
+    
    
     //m.update_board(m.get_square({0,2}));
-    std::cout << "-------Label-------\n";
-    std::vector<int> label = m.get_label();
-    
-    for(int i = 0; i < r; i++){
-       for(int j = 0; j < c; j++){
-            cout << label[i + r*j] << " ";
-        }
-        cout << endl; 
-    }
+   
     return 0;
 }
