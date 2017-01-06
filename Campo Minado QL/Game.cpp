@@ -183,7 +183,7 @@ std::vector<std::pair<int,int>> Game::getNeighbors(int row, int col){
 	return neighbors;
 }
 
-//Retorna o campo do jogo (pode contar isso como estado)
+//Retorna o campo do jogo 
 std::vector<std::vector<int> > Game::getMineBoard(){
 	return this-> mineBoard;
 }
