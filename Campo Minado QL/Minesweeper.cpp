@@ -12,7 +12,7 @@ Minesweeper::Minesweeper(int gridWidth, int gridHeight, int numberOfMines)
     this->gridHeight = gridHeight;
 
     this->numberOfMines = numberOfMines;
-    //Inicializa o campo com as dimens�es informadas
+    //Inicializa o campo com as dimensões informadas
     mineBoard.resize(gridHeight);
     for (int i = 0; i < gridHeight; ++i)
         mineBoard[i].resize(gridWidth);
@@ -40,7 +40,7 @@ Minesweeper::~Minesweeper()
 
 /**
   * fillSurroundings(int, int,bool)
-  * Incrementa as adjac�ncias da mina encontrada na posi��o (row,column)
+  * Incrementa as adjacências da mina encontrada na posição (row,column)
   * @param int - Row
   * @param int - Column
   */
