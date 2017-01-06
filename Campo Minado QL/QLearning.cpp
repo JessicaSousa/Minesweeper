@@ -42,7 +42,7 @@ Tuple RandomMove(std::vector<std::vector<int>> board, std::vector<Tuple> frontie
 
 QTable SimpleQL::TrainQValues(int num_total_simulations, int row, int col, int difficulty, int rewardValue){
 
-	QTable qValues;
+    QTable qValues;
 
     for(int iterationNo = 0; iterationNo < num_total_simulations; iterationNo++){
 
@@ -84,7 +84,7 @@ QTable SimpleQL::TrainQValues(int num_total_simulations, int row, int col, int d
 
 Tuple SimpleQL::GetNextMove(QTable qMap, Game game){
 
-	Tuple bestMoveLocation(-1,-1);
+    Tuple bestMoveLocation(-1,-1);
 
     float maxQValue = -std::numeric_limits<float>::infinity();
 
