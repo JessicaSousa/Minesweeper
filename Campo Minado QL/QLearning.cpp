@@ -32,7 +32,7 @@ Tuple RandomMove(std::vector<std::vector<int>> board, std::vector<Tuple> frontie
 
 	    bool found = (std::find(frontier.begin(), frontier.end(), move)) != frontier.end();
 
-		if(found)
+		if(!found)
 			return move;
 		if(board[x][y] != COVERED)
 			return move;
