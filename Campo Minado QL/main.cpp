@@ -35,22 +35,18 @@ int main(){
 	Random::seed();
 
 	int numLearningIterations = 1000;
-	int numPlayingIterations = 100;
+	int numPlayingIterations = 1;
 	int numRows = 4;
 	int numCols = 4;
 	int difficulty = 1;
 
 	//Gerar Q-Values Table
 	QPairMapState qTable = ModifiedQL::TrainQValues(numLearningIterations, numRows, numCols,difficulty);
-
-	float avgPercentTilesCleared = 0.0;
-	double numWins = 0.0;
-	double numGames = 0.0;
 	
 	for(int i = 0; i < numPlayingIterations; i++){
 		
 		if (i % 10 == 0)
-            std::cout << "Playing " << i <<"th testing game.\n";
+			std::cout << "Playing " << i <<"th testing game.\n";
 		
 		Game game(numRows, numCols,difficulty);
 		Tuple firstMove(0, 0);
@@ -73,23 +69,9 @@ int main(){
 			game.makeMove(nextMove.first, nextMove.second);
 			//Obtém estado atual do jogo
 			currentState = game.getMineBoard();
-		}
-		
-		if (game.isWon())
-			numWins += 1;
-		numGames++;
-			
-	    double numTilesCleared = sumUncovered(game.getMineBoard());
-		avgPercentTilesCleared = avgPercentTilesCleared * (numGames/(numGames + 1)) +  ((numTilesCleared)/(numRows * numCols))/(numGames + 1);
+		}			
+	    
 	}
-	
-	avgPercentTilesCleared *= 100;
-    double successRate = ((numWins)/numGames)*100;
-    std::cout << "Number of training games: " << numLearningIterations << std::endl;
-	std::cout <<  "Number of testing games "<<  numPlayingIterations << std::endl;
-	std::cout <<  "Percentage of games won: "<<  successRate << std::endl;
-	std::cout <<  "Cleared an average of " <<  (avgPercentTilesCleared) << "of the board"<<std::endl;
-	
 
 	return 0;
 }
