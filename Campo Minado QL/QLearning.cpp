@@ -24,13 +24,11 @@ Tuple RandomMove(std::vector<std::vector<int>> board, std::vector<Tuple> frontie
 	int col = board.front().size();
 
 	while(true){
-
 		int x = Random::RandInt(0,row-1);
-	    int y = Random::RandInt(0,col-1);
-
-	    Tuple move(x,y);
-
-	    bool found = (std::find(frontier.begin(), frontier.end(), move)) != frontier.end();
+	    	int y = Random::RandInt(0,col-1);
+		Tuple move(x,y);
+		
+		bool found = (std::find(frontier.begin(), frontier.end(), move)) != frontier.end();
 
 		if(!found)
 			return move;
@@ -203,125 +201,105 @@ std::vector<int> ModifiedQL::GetLabel(Game game){
 
 
 	for(int row = 0; row < row_size; row++){
-
 		for(int col = 0; col < column_size; col++){
+			Tuple coord(row,col);
 
-           Tuple coord(row,col);
+		   	bool found = (std::find(frontier.begin(), frontier.end(), coord)) != frontier.end();
 
-           bool found = (std::find(frontier.begin(), frontier.end(), coord)) != frontier.end();
-
-            if(found){
-
-            	if(!game.isMine(row,col)) label.push_back(1);
-            	else label.push_back(0);
-
-             }else{
-
-                  label.push_back(0);
-
-              }
-
-         }
-     }
-
-     return label;
+			if(found){
+				if(!game.isMine(row,col)) label.push_back(1);
+				else label.push_back(0);
+			}else{
+				label.push_back(0);
+			}
+		}
+	}
+	return label;
 }
 
 QPairMapState ModifiedQL::TrainQValues(int num_total_simulations, int row, int col, int difficulty, int reward){
-
 	QTable qValues;
 	QState qStateCounter;
-    //int accumulatedReward = 0;
-    for(int iterationNo = 0; iterationNo < num_total_simulations; iterationNo++){
+    
+	    for(int iterationNo = 0; iterationNo < num_total_simulations; iterationNo++){
 
-        if (iterationNo % 1000 == 0)
-            std::cout << "Playing " << iterationNo <<"th training game.\n";
+		if (iterationNo % 1000 == 0)
+		    std::cout << "Playing " << iterationNo <<"th training game.\n";
 
-        Game game(row, col, difficulty);
+		Game game(row, col, difficulty);
 
 		//Canto esquerdo superior
-        int x = 0;
-        int y = 0;
+		int x = 0;
+		int y = 0;
 
 		//Realizar jogada
-        game.makeMove(x,y);
+		game.makeMove(x,y);
 
 		//Obter o estado atual do campo
-        std::vector<std::vector<int>> currentState = game.getMineBoard();
+		std::vector<std::vector<int>> currentState = game.getMineBoard();
 
-        while(!game.isGameEnd()){
+		while(!game.isGameEnd()){
 			//Obter a lista dos movimentos corretos
-        	std::vector<int> label = GetLabel(game);
-        	std::vector<int> listOfCorrectMoveIndices;
+			std::vector<int> label = GetLabel(game);
+			std::vector<int> listOfCorrectMoveIndices;
 			//Indica que o estado foi visitado uma vez
-        	qStateCounter[currentState] += 1;
+			qStateCounter[currentState] += 1;
 
-        	for( unsigned int i = 0; i < label.size() ; i++ ){
+			for( unsigned int i = 0; i < label.size() ; i++ ){
+				QPair stateAndAction(currentState, Get2DCoordFromIndex(i,col));
 
-        		QPair stateAndAction(currentState, Get2DCoordFromIndex(i,col));
+				if( label[i] == 1 ){
+					qValues[stateAndAction] += reward;
+					listOfCorrectMoveIndices.push_back(i);
+				}
+			}
+			
+			if(listOfCorrectMoveIndices.empty()){
+				Tuple nextMove = RandomMove(currentState, game.getFrontier());
 
-        		if( label[i] == 1 ){
-        			qValues[stateAndAction] += reward;
-        			listOfCorrectMoveIndices.push_back(i);
-        		}
-        	}
+				x = nextMove.first;
+				y = nextMove.second;
 
-            
-        	if(listOfCorrectMoveIndices.empty()){
+			}else{
+				int index  = Random::RandomChoice(listOfCorrectMoveIndices);
+				Tuple randomCorrectLocation = Get2DCoordFromIndex(index,col);
+				x = randomCorrectLocation.first;
+				y = randomCorrectLocation.second;
+			}
 
-        		Tuple nextMove = RandomMove(currentState, game.getFrontier());
-        		 
-        	
-        		x = nextMove.first;
-        		y = nextMove.second;
-
-        	}else{
-        		int index  = Random::RandomChoice(listOfCorrectMoveIndices);
-        		Tuple randomCorrectLocation = Get2DCoordFromIndex(index,col);
-                x = randomCorrectLocation.first;
-                y = randomCorrectLocation.second;
-
-        	}
-
-        	game.makeMove(x,y);
-            currentState = game.getMineBoard();
-
-        }
-
-    }
-
-    return std::make_pair(qValues,qStateCounter);
+			game.makeMove(x,y);
+		    	currentState = game.getMineBoard();
+		}
+	    }
+	return std::make_pair(qValues,qStateCounter);
 }
 
+
 Tuple ModifiedQL::GetNextMove(QTable qMap, QState qStateCounter, Game game){
-	
 	Tuple bestMoveLocation(-1,-1);
 
-    float maxQValue = -std::numeric_limits<float>::infinity();
+	float maxQValue = -std::numeric_limits<float>::infinity();
 
-    std::vector<Tuple> possibleMoves = game.getFrontier();
-    std::vector<std::vector<int>> currentState = game.getMineBoard();
+	std::vector<Tuple> possibleMoves = game.getFrontier();
+	std::vector<std::vector<int>> currentState = game.getMineBoard();
 
-    bool shouldPickRandomMove = true;
+	bool shouldPickRandomMove = true;
 
-    for(auto move: possibleMoves){
-        QPair stateAndAction(currentState, move);
-        int q = qMap[stateAndAction];
-        if (q > maxQValue){
-            bestMoveLocation = move;
-            maxQValue =  q;
-        }
-    }
-
-    if (maxQValue > 0 || qStateCounter[currentState] == 0){
-        shouldPickRandomMove = false;
-    }
-
-    if (shouldPickRandomMove){
-        return RandomMove(currentState, possibleMoves);
-    }
-
-   return bestMoveLocation;
+	for(auto move: possibleMoves){
+		QPair stateAndAction(currentState, move);
+		int q = qMap[stateAndAction];
+		if (q > maxQValue){
+		    bestMoveLocation = move;
+		    maxQValue =  q;
+		}
+	}
+	if (maxQValue > 0 || qStateCounter[currentState] == 0){
+		shouldPickRandomMove = false;
+	}
+	if (shouldPickRandomMove){
+		return RandomMove(currentState, possibleMoves);
+	}
+	return bestMoveLocation;
 }
 
 
